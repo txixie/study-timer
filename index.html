@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fff9fb" />
+    <meta
+      name="description"
+      content="A gentle study timer with daily focus records, tasks, and photos."
+    />
+    <title>공부 타이머</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --background: 342 35% 98%;
+        --foreground: 335 20% 22%;
+        --border: 342 26% 92%;
+        --input: 342 28% 89%;
+        --ring: 346 48% 76%;
+        --card: 342 62% 100%;
+        --primary: 346 68% 78%;
+        --primary-foreground: 335 26% 28%;
+        --secondary: 342 42% 96%;
+        --muted-foreground: 335 12% 55%;
+        --accent: 347 58% 83%;
+        --destructive: 0 58% 56%;
+        --shadow-soft: 0 16px 40px hsl(338 35% 38% / 0.08);
+        --shadow-tiny: 0 2px 10px hsl(338 35% 38% / 0.07);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        color: hsl(var(--foreground));
+        background: hsl(var(--background));
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(
+            circle at 10% 0%,
+            hsl(348 64% 98% / 0.9),
+            transparent 30rem
+          ),
+          hsl(var(--background));
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: not-allowed;
+      }
+      ::selection {
+        background: hsl(var(--accent) / 0.26);
+      }
+
+      .shell {
+        min-height: 100vh;
+        padding: 28px 24px 44px;
+      }
+      .frame {
+        width: min(1120px, 100%);
+        margin: 0 auto;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid hsl(var(--border) / 0.8);
+      }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 650;
+        letter-spacing: -0.025em;
+      }
+      h2,
+      p {
+        margin: 0;
+      }
+      h2 {
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .date-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px;
+        border: 1px solid hsl(var(--border));
+        border-radius: 13px;
+        background: hsl(var(--card) / 0.76);
+        box-shadow: var(--shadow-tiny);
+      }
+      .date-arrow,
+      .icon-button,
+      .text-button,
+      .primary-button,
+      .mode-pill,
+      .photo-dropzone,
+      .photo-add-tile,
+      .photo-remove,
+      .todo-check {
+        transition:
+          background 160ms ease,
+          border-color 160ms ease,
+          color 160ms ease,
+          transform 160ms ease,
+          opacity 160ms ease;
+      }
+      .date-arrow {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 0;
+        border-radius: 9px;
+        color: hsl(var(--muted-foreground));
+        background: transparent;
+      }
+      .date-arrow:hover:not(:disabled),
+      .icon-button:hover:not(:disabled) {
+        background: hsl(var(--secondary));
+      }
+      .date-entry {
+        display: flex;
+        align-items: center;
+        height: 32px;
+        padding: 0 9px;
+        border-radius: 9px;
+        background: hsl(var(--secondary) / 0.72);
+      }
+      .date-entry svg {
+        margin-right: 8px;
+        color: hsl(var(--primary));
+      }
+      .date-input {
+        width: 124px;
+        border: 0;
+        outline: 0;
+        color: hsl(var(--foreground));
+        background: transparent;
+        font-size: 12px;
+        font-weight: 550;
+      }
+      .date-input::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        opacity: 0.62;
+      }
+      .text-button {
+        margin-left: 4px;
+        padding: 7px 10px;
+        border: 0;
+        border-radius: 9px;
+        color: hsl(var(--primary));
+        background: transparent;
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .text-button:hover:not(:disabled) {
+        background: hsl(var(--accent) / 0.12);
+      }
+      .text-button:disabled {
+        opacity: 0.4;
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
+        align-items: start;
+        gap: 20px;
+        margin-top: 28px;
+      }
+      .timer-card,
+      .panel,
+      .history {
+        border: 1px solid hsl(var(--border));
+        border-radius: 18px;
+        box-shadow: var(--shadow-tiny);
+      }
+      .timer-card {
+        padding: 32px;
+        background: hsl(var(--card) / 0.9);
+        box-shadow: var(--shadow-soft);
+      }
+      .timer-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .mode-title {
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .mode-description {
+        margin-top: 4px;
+        color: hsl(var(--muted-foreground));
+        font-size: 12px;
+      }
+      .focus-length {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: hsl(var(--muted-foreground));
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .focus-length input {
+        width: 56px;
+        height: 33px;
+        padding: 0 8px;
+        border: 1px solid hsl(var(--border));
+        border-radius: 10px;
+        outline: none;
+        color: hsl(var(--foreground));
+        background: hsl(var(--secondary) / 0.62);
+        text-align: center;
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .timer-ring {
+        display: flex;
+        width: min(360px, 78vw);
+        aspect-ratio: 1;
+        align-items: center;
+        justify-content: center;
+        margin: 42px auto 40px;
+        border-radius: 50%;
+        transition:
+          background 280ms ease,
+          transform 280ms ease;
+      }
+      .timer-ring.running {
+        transform: scale(1.012);
+      }
+      .timer-ring.pulse {
+        animation: completion-pulse 800ms ease;
+      }
+      .timer-core {
+        display: flex;
+        width: calc(100% - 14px);
+        aspect-ratio: 1;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: hsl(var(--card));
+        box-shadow:
+          inset 0 0 0 1px hsl(var(--border) / 0.45),
+          0 10px 32px hsl(338 35% 38% / 0.07);
+      }
+      .timer-value {
+        font-size: clamp(3.6rem, 8vw, 5.5rem);
+        font-weight: 300;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        font-variant-numeric: tabular-nums;
+      }
+      .mode-selector {
+        display: flex;
+        width: fit-content;
+        gap: 4px;
+        margin: 0 auto;
+        padding: 4px;
+        border-radius: 13px;
+        background: hsl(var(--secondary) / 0.65);
+      }
+      .mode-pill {
+        padding: 9px 13px;
+        border: 0;
+        border-radius: 9px;
+        color: hsl(var(--muted-foreground));
+        background: transparent;
+        font-size: 13px;
+        font-weight: 520;
+      }
+      .mode-pill:hover {
+        color: hsl(var(--foreground));
+      }
+      .mode-pill.selected {
+        color: hsl(var(--foreground));
+        background: hsl(var(--card));
+        box-shadow: var(--shadow-tiny);
+      }
+      .timer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        margin-top: 20px;
+      }
+      .icon-button {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border: 1px solid hsl(var(--border));
+        border-radius: 13px;
+        color: hsl(var(--muted-foreground));
+        background: hsl(var(--card));
+      }
+      .primary-button {
+        display: inline-flex;
+        min-width: 120px;
+        height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 20px;
+        border: 0;
+        border-radius: 13px;
+        color: hsl(var(--primary-foreground));
+        background: hsl(var(--primary));
+        box-shadow: 0 5px 14px hsl(var(--primary) / 0.2);
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .primary-button:hover:not(:disabled) {
+        background: hsl(346 68% 72%);
+      }
+      .primary-button:active:not(:disabled),
+      .icon-button:active:not(:disabled),
+      .date-arrow:active:not(:disabled),
+      .photo-dropzone:active,
+      .photo-add-tile:active {
+        transform: scale(0.97);
+      }
+      .audio-status {
+        min-height: 16px;
+        margin-top: 8px;
+        text-align: center;
+        color: hsl(var(--muted-foreground));
+        font-size: 11px;
+      }
+
+      .side-panels {
+        display: grid;
+        align-content: start;
+        gap: 12px;
+      }
+      .panel {
+        padding: 16px;
+        background: hsl(var(--card) / 0.78);
+      }
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .subtle,
+      .count {
+        color: hsl(var(--muted-foreground));
+        font-size: 11px;
+      }
+      .progress-icon {
+        color: hsl(var(--primary));
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .stat {
+        padding: 12px;
+        border-radius: 14px;
+        background: hsl(var(--secondary) / 0.62);
+      }
+      .stat-label {
+        color: hsl(var(--muted-foreground));
+        font-size: 11px;
+        font-weight: 550;
+      }
+      .stat-value {
+        margin-top: 4px;
+        font-size: 23px;
+        font-weight: 650;
+        letter-spacing: -0.045em;
+      }
+      .stat-value small {
+        margin-left: 4px;
+        color: hsl(var(--muted-foreground));
+        font-size: 14px;
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+
+      .todo-form {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .todo-input {
+        min-width: 0;
+        flex: 1;
+        padding: 9px 12px;
+        border: 1px solid hsl(var(--input));
+        border-radius: 12px;
+        outline: none;
+        color: hsl(var(--foreground));
+        background: hsl(var(--background) / 0.64);
+        font-size: 13px;
+      }
+      .todo-input::placeholder {
+        color: hsl(var(--muted-foreground) / 0.72);
+      }
+      .todo-input:focus,
+      .focus-length input:focus {
+        border-color: hsl(var(--ring));
+      }
+      .add-todo {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        place-items: center;
+        border: 0;
+        border-radius: 11px;
+        color: hsl(var(--primary-foreground));
+        background: hsl(var(--primary));
+      }
+      .todo-list {
+        margin-top: 12px;
+      }
+      .todo-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 36px;
+        padding: 5px 6px;
+        border-radius: 9px;
+      }
+      .todo-row:hover {
+        background: hsl(var(--secondary) / 0.48);
+      }
+      .todo-check {
+        display: grid;
+        width: 19px;
+        height: 19px;
+        flex: 0 0 19px;
+        place-items: center;
+        padding: 0;
+        border: 1px solid hsl(var(--input));
+        border-radius: 50%;
+        color: transparent;
+        background: transparent;
+      }
+      .todo-check:hover {
+        border-color: hsl(var(--primary));
+        background: hsl(var(--accent) / 0.14);
+      }
+      .todo-row.done .todo-check {
+        border-color: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+        background: hsl(var(--primary));
+      }
+      .todo-text {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .todo-row.done .todo-text {
+        color: hsl(var(--muted-foreground));
+        opacity: 0.7;
+        text-decoration: line-through;
+        text-decoration-color: hsl(var(--primary) / 0.58);
+      }
+      .todo-delete {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
+        place-items: center;
+        border: 0;
+        border-radius: 8px;
+        color: hsl(var(--muted-foreground));
+        background: transparent;
+        opacity: 0;
+      }
+      .todo-row:hover .todo-delete,
+      .todo-delete:focus-visible {
+        opacity: 1;
+      }
+      .empty-state {
+        padding: 15px 12px;
+        border: 1px dashed hsl(var(--border));
+        border-radius: 12px;
+        color: hsl(var(--muted-foreground));
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .photo-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        clip-path: inset(50%);
+      }
+      .photo-dropzone,
+      .photo-add-tile {
+        border: 1px dashed hsl(var(--border));
+        color: hsl(var(--muted-foreground));
+        background: transparent;
+      }
+      .photo-dropzone {
+        display: flex;
+        width: 100%;
+        min-height: 76px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 13px;
+        font-size: 12px;
+      }
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .photo-tile {
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
+        border-radius: 10px;
+        background: hsl(var(--secondary));
+      }
+      .photo-tile img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .photo-remove {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        display: grid;
+        width: 27px;
+        height: 27px;
+        place-items: center;
+        border: 1px solid hsl(var(--border) / 0.7);
+        border-radius: 50%;
+        color: hsl(var(--foreground));
+        background: rgb(255 255 255 / 0.92);
+        box-shadow: var(--shadow-tiny);
+        opacity: 0;
+      }
+      .photo-tile:hover .photo-remove,
+      .photo-remove:focus-visible {
+        opacity: 1;
+      }
+      .photo-add-tile {
+        display: flex;
+        aspect-ratio: 1;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border-radius: 10px;
+        font-size: 10px;
+      }
+      .photo-dropzone:hover,
+      .photo-add-tile:hover {
+        border-color: hsl(var(--ring));
+        color: hsl(var(--foreground));
+        background: hsl(var(--secondary) / 0.58);
+      }
+      .photo-note {
+        margin-top: 8px;
+        color: hsl(var(--muted-foreground));
+        font-size: 10px;
+      }
+      .photo-error {
+        margin-top: 8px;
+        color: hsl(var(--destructive));
+        font-size: 11px;
+      }
+
+      .history {
+        margin-top: 20px;
+        padding: 22px 24px;
+        background: hsl(var(--card) / 0.65);
+      }
+      .history-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .history-description {
+        margin-top: 5px;
+        color: hsl(var(--muted-foreground));
+        font-size: 12px;
+      }
+      .history-count {
+        color: hsl(var(--muted-foreground));
+        font-size: 12px;
+        font-weight: 550;
+      }
+      .history-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 32px;
+        margin-top: 14px;
+      }
+      .history-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid hsl(var(--border) / 0.75);
+        font-size: 13px;
+      }
+      .history-row:last-child {
+        border-bottom: 0;
+      }
+      .history-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .history-check {
+        display: grid;
+        width: 25px;
+        height: 25px;
+        place-items: center;
+        border-radius: 50%;
+        color: hsl(var(--primary));
+        background: hsl(var(--accent) / 0.18);
+      }
+      .history-time {
+        color: hsl(var(--muted-foreground));
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .history-empty {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 16px;
+        padding: 15px 16px;
+        border-radius: 13px;
+        color: hsl(var(--muted-foreground));
+        background: hsl(var(--secondary) / 0.46);
+        font-size: 12px;
+      }
+      .status {
+        min-height: 18px;
+        margin-top: 8px;
+        color: hsl(var(--muted-foreground));
+        font-size: 11px;
+      }
+
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid hsl(var(--ring) / 0.3);
+        outline-offset: 2px;
+      }
+      @keyframes completion-pulse {
+        50% {
+          transform: scale(1.025);
+        }
+      }
+      @media (max-width: 900px) {
+        .main-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .side-panels {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      @media (max-width: 600px) {
+        .shell {
+          padding: 16px 14px 30px;
+        }
+        .topbar {
+          gap: 14px;
+        }
+        h1 {
+          font-size: 21px;
+        }
+        .date-controls {
+          width: 100%;
+          justify-content: space-between;
+        }
+        .date-entry {
+          flex: 1;
+          justify-content: center;
+        }
+        .date-input {
+          width: 124px;
+        }
+        .main-grid {
+          gap: 14px;
+          margin-top: 20px;
+        }
+        .timer-card {
+          padding: 20px 16px;
+        }
+        .timer-card-head {
+          align-items: flex-start;
+        }
+        .mode-description {
+          max-width: 180px;
+        }
+        .focus-length {
+          gap: 6px;
+        }
+        .timer-ring {
+          width: min(290px, 78vw);
+          margin: 34px auto;
+        }
+        .timer-value {
+          font-size: clamp(3.5rem, 15vw, 4.2rem);
+        }
+        .mode-pill {
+          padding: 9px 11px;
+          font-size: 12px;
+        }
+        .history {
+          padding: 19px 16px;
+        }
+        .history-list {
+          grid-template-columns: 1fr;
+        }
+        .todo-delete,
+        .photo-remove {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 1ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app" class="shell"></main>
+    <script>
+      (() => {
+        "use strict";
+
+        const KEYS = {
+          sessions: "study-timer:sessions",
+          todos: "study-timer:todos",
+          selectedDay: "study-timer:selected-day",
+          focusMinutes: "study-timer:focus-minutes",
+        };
+        const MODE_SECONDS = { focus: 25 * 60, short: 5 * 60, long: 15 * 60 };
+        const MODE_LABELS = {
+          focus: "Focus",
+          short: "Short break",
+          long: "Long break",
+        };
+        const PHOTO_DB_NAME = "study-timer-photos";
+        const PHOTO_STORE_NAME = "photos";
+        const app = document.getElementById("app");
+
+        function safeRead(key, fallback) {
+          try {
+            const value = localStorage.getItem(key);
+            return value === null ? fallback : JSON.parse(value);
+          } catch {
+            return fallback;
+          }
+        }
+        function safeWrite(key, value) {
+          try {
+            localStorage.setItem(key, JSON.stringify(value));
+          } catch {
+            /* Keep the current session usable if storage is blocked. */
+          }
+        }
+        function isDateKey(value) {
+          return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+        }
+        function dateKey(date) {
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        }
+        function studyDayKey(date = new Date()) {
+          const adjusted = new Date(date);
+          adjusted.setHours(adjusted.getHours() - 6);
+          return dateKey(adjusted);
+        }
+        function shiftDay(key, amount) {
+          const [year, month, day] = key.split("-").map(Number);
+          const shifted = new Date(year, month - 1, day, 12);
+          shifted.setDate(shifted.getDate() + amount);
+          return dateKey(shifted);
+        }
+        function dateFromKey(key) {
+          const [year, month, day] = key.split("-").map(Number);
+          return new Date(year, month - 1, day, 12);
+        }
+        function formatStudyDay(key) {
+          return dateFromKey(key).toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          });
+        }
+        function formatDuration(minutes) {
+          if (minutes < 60) return `${minutes} min`;
+          const hours = Math.floor(minutes / 60);
+          const remaining = minutes % 60;
+          return remaining
+            ? `${hours}h ${String(remaining).padStart(2, "0")}m`
+            : `${hours}h`;
+        }
+        function formatClock(seconds) {
+          return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+        }
+        function makeId() {
+          return window.crypto && typeof window.crypto.randomUUID === "function"
+            ? window.crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        }
+        function escapeHtml(value) {
+          return String(value).replace(
+            /[&<>"']/g,
+            (char) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[char],
+          );
+        }
+        function readFocusMinutes() {
+          const value = Number(safeRead(KEYS.focusMinutes, 25));
+          return Number.isFinite(value)
+            ? Math.max(1, Math.min(120, Math.round(value)))
+            : 25;
+        }
+        function readSessions() {
+          const raw = safeRead(KEYS.sessions, {});
+          if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+          const clean = {};
+          for (const [day, entries] of Object.entries(raw)) {
+            if (!isDateKey(day) || !Array.isArray(entries)) continue;
+            clean[day] = entries.flatMap((entry) => {
+              if (
+                !entry ||
+                typeof entry !== "object" ||
+                typeof entry.id !== "string" ||
+                typeof entry.completedAt !== "string"
+              )
+                return [];
+              const minutes = Number(entry.minutes);
+              return Number.isFinite(minutes) && minutes > 0
+                ? [{ id: entry.id, completedAt: entry.completedAt, minutes }]
+                : [];
+            });
+          }
+          return clean;
+        }
+        function readTodos() {
+          const raw = safeRead(KEYS.todos, {});
+          if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+          const clean = {};
+          for (const [day, entries] of Object.entries(raw)) {
+            if (!isDateKey(day) || !Array.isArray(entries)) continue;
+            clean[day] = entries.flatMap((entry) => {
+              if (
+                !entry ||
+                typeof entry !== "object" ||
+                typeof entry.id !== "string" ||
+                typeof entry.text !== "string"
+              )
+                return [];
+              return [
+                {
+                  id: entry.id,
+                  text: entry.text.slice(0, 120),
+                  completed: entry.completed === true,
+                  createdAt:
+                    typeof entry.createdAt === "string"
+                      ? entry.createdAt
+                      : new Date().toISOString(),
+                },
+              ];
+            });
+          }
+          return clean;
+        }
+
+        let selectedDay = safeRead(KEYS.selectedDay, studyDayKey());
+        if (!isDateKey(selectedDay)) selectedDay = studyDayKey();
+        let sessions = readSessions();
+        let todos = readTodos();
+        let focusMinutes = readFocusMinutes();
+        let mode = "focus";
+        let remaining = focusMinutes * 60;
+        let isRunning = false;
+        let cycleCount = 0;
+        let timerInterval = null;
+        let audioContext = null;
+        let audioError = "";
+        let photoError = "";
+        let photoLoading = true;
+        let photos = [];
+        let photoDatabase;
+        let photoRequestId = 0;
+
+        const daySessions = () =>
+          Array.isArray(sessions[selectedDay]) ? sessions[selectedDay] : [];
+        const dayTodos = () =>
+          Array.isArray(todos[selectedDay]) ? todos[selectedDay] : [];
+        function persist() {
+          safeWrite(KEYS.selectedDay, selectedDay);
+          safeWrite(KEYS.sessions, sessions);
+          safeWrite(KEYS.todos, todos);
+          safeWrite(KEYS.focusMinutes, focusMinutes);
+        }
+        function icon(name, size = 17) {
+          const common = `width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
+          const paths = {
+            calendar:
+              '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+            left: '<path d="m15 18-6-6 6-6"/>',
+            right: '<path d="m9 18 6-6-6-6"/>',
+            list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2"/>',
+            play: '<path d="m7 4 14 8-14 8z" fill="currentColor" stroke="none"/>',
+            pause:
+              '<path d="M8 5h3v14H8zM15 5h3v14h-3z" fill="currentColor" stroke="none"/>',
+            reset:
+              '<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/>',
+            skip: '<path d="m5 5 10 7-10 7z"/><path d="M19 5v14"/>',
+            check: '<path d="m5 12 4 4L19 6"/>',
+            circle: '<circle cx="12" cy="12" r="8"/>',
+            image:
+              '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/>',
+            plus: '<path d="M12 5v14M5 12h14"/>',
+            trash: '<path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/>',
+            close: '<path d="m18 6-12 12M6 6l12 12"/>',
+            clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+          };
+          return `<svg ${common}>${paths[name] || ""}</svg>`;
+        }
+        function render() {
+          const today = studyDayKey();
+          const selectedSessions = daySessions();
+          const selectedTodos = dayTodos();
+          const focusedMinutes = selectedSessions.reduce(
+            (sum, item) => sum + item.minutes,
+            0,
+          );
+          const timerDuration =
+            mode === "focus" ? focusMinutes * 60 : MODE_SECONDS[mode];
+          const progress = Math.max(
+            0,
+            Math.min(100, (1 - remaining / timerDuration) * 100),
+          );
+          const photoCards = photos
+            .map(
+              (photo) => `
+            <div class="photo-tile">
+              <img src="${photo.url}" alt="${escapeHtml(photo.name)}" loading="lazy">
+              <button class="photo-remove" type="button" data-action="delete-photo" data-id="${escapeHtml(photo.id)}" aria-label="Remove ${escapeHtml(photo.name)}" title="Remove photo">${icon("close", 14)}</button>
+            </div>`,
+            )
+            .join("");
+          const photoArea = photos.length
+            ? `<div class="photo-grid">${photoCards}<button class="photo-add-tile" type="button" data-action="add-photo" aria-label="Add another photo">${icon("image", 19)}<span>Add</span></button></div>`
+            : `<button class="photo-dropzone" type="button" data-action="add-photo">${icon("image", 18)}<span>Add a photo</span></button>`;
+          const todoRows = selectedTodos.length
+            ? selectedTodos
+                .map(
+                  (todo) => `
+              <div class="todo-row ${todo.completed ? "done" : ""}">
+                <button class="todo-check" type="button" data-action="toggle-todo" data-id="${escapeHtml(todo.id)}" aria-label="${todo.completed ? "Mark incomplete" : "Mark complete"}: ${escapeHtml(todo.text)}">${todo.completed ? icon("check", 13) : icon("circle", 10)}</button>
+                <span class="todo-text">${escapeHtml(todo.text)}</span>
+                <button class="todo-delete" type="button" data-action="delete-todo" data-id="${escapeHtml(todo.id)}" aria-label="Delete ${escapeHtml(todo.text)}" title="Delete task">${icon("trash", 14)}</button>
+              </div>`,
+                )
+                .join("")
+            : '<p class="empty-state">Nothing queued yet.</p>';
+          const historyRows = selectedSessions.length
+            ? `<div class="history-list">${selectedSessions
+                .map((session, index) => {
+                  const time = new Date(session.completedAt).toLocaleTimeString(
+                    undefined,
+                    { hour: "numeric", minute: "2-digit" },
+                  );
+                  return `<div class="history-row"><div class="history-label"><span class="history-check">${icon("check", 13)}</span><span>Focus block ${selectedSessions.length - index}</span></div><span class="history-time">${escapeHtml(time)}</span></div>`;
+                })
+                .join("")}</div>`
+            : `<div class="history-empty">${icon("clock", 16)}<span>Complete a focus block and it will appear here.</span></div>`;
+
+          app.innerHTML = `
+            <div class="frame">
+              <header class="topbar">
+                <h1>${escapeHtml(formatStudyDay(selectedDay))}</h1>
+                <nav class="date-controls" aria-label="Study day navigation">
+                  <button class="date-arrow" type="button" data-action="previous-day" aria-label="Previous study day">${icon("left", 16)}</button>
+                  <label class="date-entry">${icon("calendar", 14)}<input class="date-input" id="date-picker" type="date" aria-label="Choose study day" value="${selectedDay}"></label>
+                  <button class="date-arrow" type="button" data-action="next-day" aria-label="Next study day">${icon("right", 16)}</button>
+                  <button class="text-button" type="button" data-action="today" ${selectedDay === today ? "disabled" : ""}>Today</button>
+                </nav>
+              </header>
+
+              <div class="main-grid">
+                <section class="timer-card" aria-label="Pomodoro timer">
+                  <div class="timer-card-head">
+                    <div>
+                      <p class="mode-title">${MODE_LABELS[mode]}</p>
+                      <p class="mode-description">${mode === "focus" ? "A quiet block for one thing." : "A little space before the next block."}</p>
+                    </div>
+                    <label class="focus-length">Focus length
+                      <input id="focus-minutes" type="number" min="1" max="120" step="1" value="${focusMinutes}" aria-label="Focus length in minutes">
+                      <span>min</span>
+                    </label>
+                  </div>
+                  <div class="timer-ring ${isRunning ? "running" : ""}" id="timer-ring" style="background:conic-gradient(hsl(var(--accent)) ${progress}%, hsl(var(--secondary)) ${progress}% 100%)">
+                    <div class="timer-core"><span class="timer-value" id="timer-value" role="timer" aria-live="off">${formatClock(remaining)}</span></div>
+                  </div>
+                  <div class="mode-selector" role="group" aria-label="Timer mode">
+                    ${Object.entries(MODE_LABELS)
+                      .map(
+                        ([key, label]) =>
+                          `<button class="mode-pill ${mode === key ? "selected" : ""}" type="button" data-action="set-mode" data-mode="${key}" aria-pressed="${mode === key}">${label}</button>`,
+                      )
+                      .join("")}
+                  </div>
+                  <div class="timer-actions">
+                    <button class="icon-button" type="button" data-action="reset" aria-label="Reset timer" title="Reset">${icon("reset", 17)}</button>
+                    <button class="primary-button" type="button" data-action="toggle-timer">${icon(isRunning ? "pause" : "play", 16)}<span>${isRunning ? "Pause" : "Start"}</span></button>
+                    <button class="icon-button" type="button" data-action="skip" aria-label="Skip to the next timer" title="Skip to the next timer">${icon("skip", 17)}</button>
+                  </div>
+                  <p class="audio-status" role="status">${escapeHtml(audioError)}</p>
+                </section>
+
+                <aside class="side-panels">
+                  <section class="panel" aria-labelledby="progress-title">
+                    <div class="panel-head"><h2 id="progress-title">Day’s progress</h2><span class="progress-icon">${icon("list", 17)}</span></div>
+                    <div class="stats">
+                      <div class="stat"><p class="stat-label">Focused time</p><p class="stat-value">${formatDuration(focusedMinutes)}</p></div>
+                      <div class="stat"><p class="stat-label">Completed</p><p class="stat-value">${selectedSessions.length}<small>blocks</small></p></div>
+                    </div>
+                  </section>
+
+                  <section class="panel" aria-labelledby="todo-title">
+                    <div class="panel-head"><h2 id="todo-title">For this day</h2><span class="count">${selectedTodos.length} ${selectedTodos.length === 1 ? "task" : "tasks"}</span></div>
+                    <form class="todo-form" id="todo-form">
+                      <input class="todo-input" id="todo-input" type="text" maxlength="120" placeholder="Add a task" aria-label="Add a task">
+                      <button class="add-todo" type="submit" aria-label="Add task" title="Add task">${icon("check", 17)}</button>
+                    </form>
+                    <div class="todo-list">${todoRows}</div>
+                  </section>
+
+                  <section class="panel" aria-labelledby="photos-title">
+                    <div class="panel-head"><h2 id="photos-title">Photos</h2><span class="count">${photoLoading ? "Loading…" : `${photos.length} ${photos.length === 1 ? "photo" : "photos"}`}</span></div>
+                    <input class="photo-input" id="photo-input" type="file" accept="image/*" multiple aria-label="Add photos for this study day">
+                    <div style="margin-top:12px">${photoArea}</div>
+                    ${photoError ? `<p class="photo-error" role="alert">${escapeHtml(photoError)}</p>` : ""}
+                    <p class="photo-note">Photos are saved on this browser. Up to 12MB each.</p>
+                  </section>
+                </aside>
+              </div>
+
+              <section class="history" aria-labelledby="history-title">
+                <div class="history-head">
+                  <div><h2 id="history-title">Session history</h2><p class="history-description">Completed focus blocks for this study day.</p></div>
+                  <span class="history-count">${selectedSessions.length} total</span>
+                </div>
+                ${historyRows}
+              </section>
+            </div>`;
+        }
+
+        function updateTimerDisplay() {
+          const value = document.getElementById("timer-value");
+          const ring = document.getElementById("timer-ring");
+          if (!value || !ring) {
+            render();
+            return;
+          }
+          const duration =
+            mode === "focus" ? focusMinutes * 60 : MODE_SECONDS[mode];
+          const progress = Math.max(
+            0,
+            Math.min(100, (1 - remaining / duration) * 100),
+          );
+          value.textContent = formatClock(remaining);
+          ring.style.background = `conic-gradient(hsl(var(--accent)) ${progress}%, hsl(var(--secondary)) ${progress}% 100%)`;
+        }
+        function stopTimer() {
+          isRunning = false;
+          if (timerInterval !== null) window.clearInterval(timerInterval);
+          timerInterval = null;
+        }
+        function beginTimer() {
+          isRunning = true;
+          render();
+          timerInterval = window.setInterval(() => {
+            remaining = Math.max(0, remaining - 1);
+            updateTimerDisplay();
+            if (remaining === 0) finishTimer();
+          }, 1000);
+        }
+        function setMode(nextMode) {
+          if (!(nextMode in MODE_SECONDS)) return;
+          stopTimer();
+          mode = nextMode;
+          remaining = mode === "focus" ? focusMinutes * 60 : MODE_SECONDS[mode];
+          render();
+        }
+        function finishTimer() {
+          stopTimer();
+          if (mode === "focus") {
+            const session = {
+              id: makeId(),
+              completedAt: new Date().toISOString(),
+              minutes: focusMinutes,
+            };
+            sessions[selectedDay] = [session, ...daySessions()];
+            cycleCount += 1;
+            mode = cycleCount % 4 === 0 ? "long" : "short";
+          } else {
+            mode = "focus";
+          }
+          remaining = mode === "focus" ? focusMinutes * 60 : MODE_SECONDS[mode];
+          persist();
+          render();
+          const ring = document.getElementById("timer-ring");
+          if (ring) {
+            ring.classList.add("pulse");
+            window.setTimeout(() => ring.classList.remove("pulse"), 820);
+          }
+          playCompletionSound();
+        }
+        function playCompletionSound() {
+          if (!audioContext) {
+            audioError =
+              "Press Start once to enable the timer alarm in this browser.";
+            render();
+            return;
+          }
+          audioContext
+            .resume()
+            .then(() => {
+              const firstNoteAt = audioContext.currentTime + 0.04;
+              [659.25, 783.99, 880, 783.99, 659.25, 783.99].forEach(
+                (frequency, index) => {
+                  const startAt = firstNoteAt + index * 0.52;
+                  const oscillator = audioContext.createOscillator();
+                  const volume = audioContext.createGain();
+                  oscillator.type = "sine";
+                  oscillator.frequency.setValueAtTime(frequency, startAt);
+                  volume.gain.setValueAtTime(0.0001, startAt);
+                  volume.gain.exponentialRampToValueAtTime(
+                    0.045,
+                    startAt + 0.025,
+                  );
+                  volume.gain.exponentialRampToValueAtTime(
+                    0.0001,
+                    startAt + 0.31,
+                  );
+                  oscillator.connect(volume);
+                  volume.connect(audioContext.destination);
+                  oscillator.start(startAt);
+                  oscillator.stop(startAt + 0.33);
+                },
+              );
+              audioError = "";
+              render();
+            })
+            .catch(() => {
+              audioError = "The timer alarm could not be played.";
+              render();
+            });
+        }
+
+        function openPhotoDatabase() {
+          if (photoDatabase) return photoDatabase;
+          photoDatabase = new Promise((resolve, reject) => {
+            if (!("indexedDB" in window)) {
+              reject(
+                new Error("Photo storage is not available in this browser."),
+              );
+              return;
+            }
+            const request = indexedDB.open(PHOTO_DB_NAME, 1);
+            request.onupgradeneeded = () => {
+              const database = request.result;
+              if (!database.objectStoreNames.contains(PHOTO_STORE_NAME)) {
+                const store = database.createObjectStore(PHOTO_STORE_NAME, {
+                  keyPath: "id",
+                });
+                store.createIndex("day", "day", { unique: false });
+              }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () =>
+              reject(
+                request.error || new Error("Could not open photo storage."),
+              );
+            request.onblocked = () =>
+              reject(
+                new Error(
+                  "Photo storage is busy in another tab. Refresh and try again.",
+                ),
+              );
+          }).catch((error) => {
+            photoDatabase = undefined;
+            throw error;
+          });
+          return photoDatabase;
+        }
+        async function loadPhotos(day) {
+          const database = await openPhotoDatabase();
+          return new Promise((resolve, reject) => {
+            const transaction = database.transaction(
+              PHOTO_STORE_NAME,
+              "readonly",
+            );
+            const request = transaction
+              .objectStore(PHOTO_STORE_NAME)
+              .index("day")
+              .getAll(day);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () =>
+              reject(request.error || new Error("Could not load photos."));
+            transaction.onabort = () =>
+              reject(transaction.error || new Error("Could not load photos."));
+          });
+        }
+        async function savePhotos(records) {
+          const database = await openPhotoDatabase();
+          return new Promise((resolve, reject) => {
+            const transaction = database.transaction(
+              PHOTO_STORE_NAME,
+              "readwrite",
+            );
+            const store = transaction.objectStore(PHOTO_STORE_NAME);
+            records.forEach((record) => store.put(record));
+            transaction.oncomplete = resolve;
+            transaction.onerror = () =>
+              reject(transaction.error || new Error("Could not save photos."));
+            transaction.onabort = () =>
+              reject(transaction.error || new Error("Could not save photos."));
+          });
+        }
+        async function removePhoto(id) {
+          const database = await openPhotoDatabase();
+          return new Promise((resolve, reject) => {
+            const transaction = database.transaction(
+              PHOTO_STORE_NAME,
+              "readwrite",
+            );
+            transaction.objectStore(PHOTO_STORE_NAME).delete(id);
+            transaction.oncomplete = resolve;
+            transaction.onerror = () =>
+              reject(
+                transaction.error || new Error("Could not delete the photo."),
+              );
+            transaction.onabort = () =>
+              reject(
+                transaction.error || new Error("Could not delete the photo."),
+              );
+          });
+        }
+        async function refreshPhotos(clearError = false) {
+          const requestId = ++photoRequestId;
+          const targetDay = selectedDay;
+          photoLoading = true;
+          if (clearError) photoError = "";
+          render();
+          try {
+            const saved = await loadPhotos(targetDay);
+            if (requestId !== photoRequestId) return;
+            photos.forEach((photo) => URL.revokeObjectURL(photo.url));
+            photos = saved.map((photo) => ({
+              ...photo,
+              url: URL.createObjectURL(photo.blob),
+            }));
+          } catch (error) {
+            if (requestId !== photoRequestId) return;
+            photoError =
+              error instanceof Error ? error.message : "Could not load photos.";
+          } finally {
+            if (requestId === photoRequestId) {
+              photoLoading = false;
+              render();
+            }
+          }
+        }
+        async function handlePhotoFiles(fileList) {
+          const files = Array.from(fileList || []);
+          if (!files.length) return;
+          const validFiles = files.filter(
+            (file) =>
+              file.type.startsWith("image/") && file.size <= 12 * 1024 * 1024,
+          );
+          photoError =
+            validFiles.length !== files.length
+              ? "Images only; each photo must be 12MB or smaller."
+              : "";
+          if (!validFiles.length) {
+            render();
+            return;
+          }
+          try {
+            await savePhotos(
+              validFiles.map((file) => ({
+                id: makeId(),
+                day: selectedDay,
+                name: file.name,
+                type: file.type,
+                blob: file,
+                createdAt: new Date().toISOString(),
+              })),
+            );
+            await refreshPhotos();
+          } catch (error) {
+            photoError =
+              error instanceof Error ? error.message : "Could not save photos.";
+            render();
+          }
+        }
+
+        app.addEventListener("click", async (event) => {
+          const button = event.target.closest("[data-action]");
+          if (!button) return;
+          const action = button.dataset.action;
+          if (action === "previous-day") {
+            selectedDay = shiftDay(selectedDay, -1);
+            persist();
+            render();
+            void refreshPhotos(true);
+          } else if (action === "next-day") {
+            selectedDay = shiftDay(selectedDay, 1);
+            persist();
+            render();
+            void refreshPhotos(true);
+          } else if (action === "today") {
+            selectedDay = studyDayKey();
+            persist();
+            render();
+            void refreshPhotos(true);
+          } else if (action === "set-mode") {
+            setMode(button.dataset.mode);
+          } else if (action === "toggle-timer") {
+            if (isRunning) {
+              stopTimer();
+              render();
+              return;
+            }
+            try {
+              const AudioContextClass =
+                window.AudioContext || window.webkitAudioContext;
+              if (!audioContext && AudioContextClass)
+                audioContext = new AudioContextClass();
+              if (!audioContext)
+                audioError = "This browser does not support timer audio.";
+              else
+                audioContext
+                  .resume()
+                  .then(() => {
+                    audioError = "";
+                    render();
+                  })
+                  .catch(() => {
+                    audioError = "Timer audio is unavailable in this browser.";
+                    render();
+                  });
+            } catch {
+              audioError = "This browser does not support timer audio.";
+            }
+            beginTimer();
+          } else if (action === "reset") {
+            stopTimer();
+            remaining =
+              mode === "focus" ? focusMinutes * 60 : MODE_SECONDS[mode];
+            render();
+          } else if (action === "skip") {
+            setMode(mode === "focus" ? "short" : "focus");
+          } else if (action === "toggle-todo") {
+            todos[selectedDay] = dayTodos().map((todo) =>
+              todo.id === button.dataset.id
+                ? { ...todo, completed: !todo.completed }
+                : todo,
+            );
+            persist();
+            render();
+          } else if (action === "delete-todo") {
+            todos[selectedDay] = dayTodos().filter(
+              (todo) => todo.id !== button.dataset.id,
+            );
+            persist();
+            render();
+          } else if (action === "add-photo") {
+            document.getElementById("photo-input").click();
+          } else if (action === "delete-photo") {
+            try {
+              await removePhoto(button.dataset.id);
+              await refreshPhotos();
+            } catch (error) {
+              photoError =
+                error instanceof Error
+                  ? error.message
+                  : "Could not delete the photo.";
+              render();
+            }
+          }
+        });
+        app.addEventListener("submit", (event) => {
+          if (event.target.id !== "todo-form") return;
+          event.preventDefault();
+          const input = document.getElementById("todo-input");
+          const text = input.value.trim();
+          if (!text) return;
+          todos[selectedDay] = [
+            {
+              id: makeId(),
+              text: text.slice(0, 120),
+              completed: false,
+              createdAt: new Date().toISOString(),
+            },
+            ...dayTodos(),
+          ];
+          persist();
+          render();
+          document.getElementById("todo-input").focus();
+        });
+        app.addEventListener("change", (event) => {
+          const target = event.target;
+          if (target.id === "date-picker" && isDateKey(target.value)) {
+            selectedDay = target.value;
+            persist();
+            render();
+            void refreshPhotos(true);
+          } else if (target.id === "focus-minutes") {
+            const value = Number(target.value);
+            if (!Number.isFinite(value)) return;
+            focusMinutes = Math.max(1, Math.min(120, Math.round(value)));
+            if (mode === "focus" && !isRunning) remaining = focusMinutes * 60;
+            persist();
+            render();
+          } else if (target.id === "photo-input") {
+            void handlePhotoFiles(target.files);
+            target.value = "";
+          }
+        });
+
+        render();
+        void refreshPhotos();
+      })();
+    </script>
+  </body>
+</html>
